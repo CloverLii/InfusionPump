@@ -4,10 +4,13 @@ import javax.swing.JFrame;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.Timer;
 import javax.swing.border.Border;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.Color;
 import java.awt.Container;
 import java.awt.EventQueue;
@@ -118,6 +121,24 @@ public class InfusionPump extends JFrame{
 				executeYesStart();
 			}
 		});
+		
+//		Timer timer2 = new Timer(2000, new ActionListener() {
+//			@Override
+//			public void actionPerformed(ActionEvent e) {
+//				executeOnOff();
+//			}
+//		});
+//		
+//		YesStart.addMouseListener(new MouseAdapter() {			 
+//		      @Override
+//		      public void mousePressed(MouseEvent e) {
+//		        timer2.start();
+//		      }		 
+//		      @Override
+//		      public void mouseReleased(MouseEvent e) {
+//		        timer2.stop();
+//		      }
+//		    });		
 		container.add(YesStart);
 			
 		NoStop = new JButton("No/Stop");
@@ -129,17 +150,37 @@ public class InfusionPump extends JFrame{
 				executeNoStop();
 			}
 		});
+		
 		container.add(NoStop);	
 		
 		OnOff = new JButton("On/Off");
 		OnOff.setName("OnOff");
 		OnOff.setBounds(330, 220, 200, 200);
-		OnOff.addActionListener(new ActionListener(){
+		
+//		OnOff.addActionListener(new ActionListener(){
+//			@Override
+//			public void actionPerformed(ActionEvent e){
+//				executeOnOff();
+//			}
+//		});
+		
+		Timer timer = new Timer(2000, new ActionListener() {
 			@Override
-			public void actionPerformed(ActionEvent e){
+			public void actionPerformed(ActionEvent e) {
 				executeOnOff();
 			}
 		});
+		
+		OnOff.addMouseListener(new MouseAdapter() {			 
+		      @Override
+		      public void mousePressed(MouseEvent e) {
+		        timer.start();
+		      }		 
+		      @Override
+		      public void mouseReleased(MouseEvent e) {
+		        timer.stop();
+		      }
+		    });		
 		container.add(OnOff);		
 		
 		jf.setLayout(null);
