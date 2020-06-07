@@ -102,15 +102,12 @@ public class InfusionPump extends JFrame{
 		container.add(hintLabel);
 		
 		displayLabel  = new JLabel("Display Settings");
-		//Display.getBounds();
-		//Display.setName("Display");
 		displayLabel.setBounds(230, 20, 260, 180);
 		displayLabel.setBorder(border);
 		displayLabel.setText(displayContent);
 		container.add(displayLabel);
 			
 		upBtn = new JButton("+");
-		//Up.setName("Up");
 		upBtn.setBounds(30, 220, 80, 80);
 		upBtn.addActionListener(new ActionListener(){
 			@Override
@@ -122,7 +119,6 @@ public class InfusionPump extends JFrame{
 		container.add(upBtn);
 		
 		downBtn = new JButton("-");
-		//Down.setName("Down");
 		downBtn.setBounds(30, 320, 80, 80);
 		downBtn.addActionListener(new ActionListener(){
 			@Override
@@ -134,7 +130,6 @@ public class InfusionPump extends JFrame{
 		container.add(downBtn);
 		
 		yesStartBtn = new JButton("Yes/Start");
-		//YesStart.setName("YesStart");
 		yesStartBtn.setBounds(125, 220, 170, 80);		
 		yesStartBtn.addActionListener(new ActionListener(){
 			@Override
@@ -157,7 +152,6 @@ public class InfusionPump extends JFrame{
 		container.add(noStopBtn);	
 		
 		onOffBtn = new JButton("On/Off");
-		//OnOff.setName("OnOff");
 		onOffBtn.setBounds(310, 220, 180, 180);
 		onOffBtn.addActionListener(new ActionListener(){
 			@Override
@@ -270,23 +264,26 @@ public class InfusionPump extends JFrame{
 			case Infusing:
 			case SettingsCancelled:
 				status = Status.SetVolume;
+				System.out.println("**** Set volume ****");
 				break;
 			case SetVolume:
 				status = Status.SetDuration;
+				System.out.println("**** Set duration ****");
 				break;
 			case SetDuration:
 				status = Status.SettingsConfirmed;
 				oldVolume = volume;
 				oldDuration = duration;
+				System.out.println("**** Confirm settings ****");
 				break;
 			case SettingsConfirmed:
 				status = Status.QStartInfusion;
+				System.out.println("**** Start infusion ? ****");
 				break;
 			case QStartInfusion:
-				status = Status.Infusing;
-				break;
 			case Paused:
 				status = Status.Infusing;
+				System.out.println("**** Start infusion ... ****");
 				break;
 			default:
 				break;
