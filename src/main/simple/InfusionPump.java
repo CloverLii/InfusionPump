@@ -4,13 +4,9 @@ import javax.swing.JFrame;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
-import javax.swing.Timer;
 import javax.swing.border.Border;
-
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.Color;
 import java.awt.Container;
 import java.awt.EventQueue;
@@ -18,34 +14,52 @@ import java.awt.EventQueue;
 
 public class InfusionPump extends JFrame{
 
-	public JButton Up;
-	public JButton Down;
-	public JButton YesStart;
-	public JButton NoStop;
-	public JButton OnOff;
-	public JLabel Display;
+	private JButton upBtn;
+	private JButton downBtn;
+	private JButton yesStartBtn;
+	private JButton noStopBtn;
+	private JButton onOffBtn;
+	private JLabel displayLabel;
+	private JLabel hintLabel;
 			
-	private int TOTAL_VOLUME = 500;
-	private int RATE_MAX = 25;
-	private int VALUE_STEP = 1;
+	private final int VOLUME_MAX = 800; //ml
+	private final int VOLUME_MIN = 100;
+	private final int DURATION_MAX = 80; //mins
+	private final int DURATION_MIN = 10;
+	private final int VOLUME_STEP = 100;
+	private final int DURATION_STEP = 10;
 	
 	private int pumpID;
 	private int batteryPercent = 0;
-	private int rate;	// volume per minute, ml/min
-	private int duration;	// duration = TOTAL_VOLUME/rate
-	private int curRate;
-	private String displayContent = "";
-	private boolean isPowerOn = false;
+	private int volume = 0; //ml
+	private int duration = 0;	//mins
+	private int oldVolume = 0;
+	private int oldDuration = 0;
+	private String displayContent = " ";
+	
+	private final String hintStr = "<html>"
+			+ " Configuration Instruction"
+			+ "<br>"
+			+ "<br> -> Power On"
+			+ "<br> -> Set Volume"
+			+ "<br> -> Set Duration"
+			+ "<br> -> Confirm Settings"
+			+ "<br> -> Start Infusion?"
+			+ "<br> -> Start Infusion...";
 	
 	enum Status{
+		Off,
 		Initial,	// initial status after powered on
-		SettingStart,	// start setting
-		Setting,	// configuration is ongoing, + and - is enabled
-		Paused,		// infusion is paused
+		SetVolume,
+		SetDuration,
+		SettingsConfirmed,
+		QStartInfusion,
 		Infusing,	// infusion is ongoing
-		SettingCancelled	// configuration is cancelled
+		Paused,		// infusion is paused
+		SettingsCancelled,	// configuration is cancelled
+		Stopped
 	}
-	private Status status;
+	private Status status = Status.Off;
 	
 	/**
 	 * Launch the application.
@@ -67,7 +81,7 @@ public class InfusionPump extends JFrame{
 	public InfusionPump(int id) {
 		this.pumpID = id;
 		initialize();
-		initializeValue();
+		displayInfo();
 	}
 	
 /**
@@ -76,107 +90,86 @@ public class InfusionPump extends JFrame{
 	public void initialize () {
 		
 		JFrame jf = new JFrame("Infusion Pump");
-		jf.setBounds(100, 100, 550, 470 );
+		jf.setBounds(100, 100, 530, 450 );
 		
 		Container container = jf.getContentPane();	
 		
-		Display  = new JLabel("Display Settings");
-		Display.getBounds();
-		Display.setName("Display");
-		Display.setBounds(80, 10, 400, 200);
+		hintLabel  = new JLabel();
+		hintLabel.setBounds(30, 20, 180, 180);
 		Border border = BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1);
-		Display.setBorder(border);
-		Display.setText(displayContent);
-		container.add(Display);
+		hintLabel.setBorder(border);
+		hintLabel.setText(hintStr);
+		container.add(hintLabel);
+		
+		displayLabel  = new JLabel("Display Settings");
+		//Display.getBounds();
+		//Display.setName("Display");
+		displayLabel.setBounds(230, 20, 260, 180);
+		displayLabel.setBorder(border);
+		displayLabel.setText(displayContent);
+		container.add(displayLabel);
 			
-		Up = new JButton("+");
-		Up.setName("Up");
-		Up.setBounds(10, 220, 100, 100);
-		Up.addActionListener(new ActionListener(){
+		upBtn = new JButton("+");
+		//Up.setName("Up");
+		upBtn.setBounds(30, 220, 80, 80);
+		upBtn.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
 				executeUp();
 			}
 		});
-		container.add(Up);
+		upBtn.setEnabled(false);
+		container.add(upBtn);
 		
-		Down = new JButton("-");
-		Down.setName("Down");
-		Down.setBounds(10, 330, 100, 100);
-		Down.addActionListener(new ActionListener(){
+		downBtn = new JButton("-");
+		//Down.setName("Down");
+		downBtn.setBounds(30, 320, 80, 80);
+		downBtn.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
 				executeDown();
 			}
 		});
-		container.add(Down);
+		downBtn.setEnabled(false);
+		container.add(downBtn);
 		
-		YesStart = new JButton("Yes/Start");
-		YesStart.setName("YesStart");
-		YesStart.setBounds(120, 220, 200, 100);		
-		// press: confirm the settings or start infusion
-		YesStart.addActionListener(new ActionListener(){
+		yesStartBtn = new JButton("Yes/Start");
+		//YesStart.setName("YesStart");
+		yesStartBtn.setBounds(125, 220, 170, 80);		
+		yesStartBtn.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
 				executeYesStart();
 			}
 		});
-		
-		// long press: start setting
-		Timer timer2 = new Timer(2000, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				executeSetting();
-			}
-		});
-		
-		YesStart.addMouseListener(new MouseAdapter() {			 
-		      @Override
-		      public void mousePressed(MouseEvent e) {
-		        timer2.start();
-		      }		 
-		      @Override
-		      public void mouseReleased(MouseEvent e) {
-		        timer2.stop();
-		      }
-		    });		
-		container.add(YesStart);
+		container.add(yesStartBtn);
 			
-		NoStop = new JButton("No/Stop");
-		NoStop.setName("NoStop");
-		NoStop.setBounds(120, 330, 200, 100);
-		NoStop.addActionListener(new ActionListener(){
+		noStopBtn = new JButton("No/Stop");
+		//NoStop.setName("NoStop");
+		noStopBtn.setBounds(125, 320, 170, 80);
+		noStopBtn.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
 				executeNoStop();
 			}
-		});		
-		container.add(NoStop);	
+		});	
+		noStopBtn.setEnabled(false);
+		container.add(noStopBtn);	
 		
-		OnOff = new JButton("On/Off");
-		OnOff.setName("OnOff");
-		OnOff.setBounds(330, 220, 200, 200);		
-		Timer timer = new Timer(2000, new ActionListener() {
+		onOffBtn = new JButton("On/Off");
+		//OnOff.setName("OnOff");
+		onOffBtn.setBounds(310, 220, 180, 180);
+		onOffBtn.addActionListener(new ActionListener(){
 			@Override
-			public void actionPerformed(ActionEvent e) {
+			public void actionPerformed(ActionEvent e){
 				executeOnOff();
 			}
-		});		
-		OnOff.addMouseListener(new MouseAdapter() {			 
-		      @Override
-		      public void mousePressed(MouseEvent e) {
-		        timer.start();
-		      }		 
-		      @Override
-		      public void mouseReleased(MouseEvent e) {
-		        timer.stop();
-		      }
-		    });		
-		container.add(OnOff);		
+		});				
+		container.add(onOffBtn);		
 		
 		jf.setLayout(null);
 		jf.setVisible(true);
-		jf.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+		jf.setDefaultCloseOperation(EXIT_ON_CLOSE);
 	}
 	
 /**
@@ -185,56 +178,64 @@ public class InfusionPump extends JFrame{
 	private void initializeValue() {
 		
 		batteryPercent = 100;
-		rate = 5;
-		curRate = rate;
-		duration = TOTAL_VOLUME/rate;
+		duration = 10;
+		volume = 100;
+		duration = 10;
+		oldVolume = volume;
+		oldDuration = duration;
+		
 		status = Status.Initial;
+		upBtn.setEnabled(true);
+		downBtn.setEnabled(true);
+		noStopBtn.setEnabled(true);
 		displayInfo();
 	}
 	
 	private void displayInfo() {
-		if(isPowerOn) {
+		if(status == Status.Off) {
 			displayContent = "<html>" 
-					+ "<br>1. Long press [On/Off] to power on "
-					+ "<br>2. Long press [Yes/Start] to configure the infusion pump"
-					+ "<br>3. Duration(mins) = total volume/rate"
-					+ "<br>"
-					+ "<br>PumpId: " + pumpID
-					+ "<br>BatteryPercent: " + batteryPercent
-					+ "<br>Total Volume: " + TOTAL_VOLUME
-					+ "<br>Rate(ml/min): " + rate
-					+ "<br>Duration(mins): " + duration
-					+ "<br>Status: " + status
-					+ "</html>";
+							+ " <br>Powered Off"
+							+ " <br>"
+							+ " <br>Display confusion status and settings"
+							+ "</html>";			
 		}else {
-			displayContent = "<html>"
-					+ " Powered off..."
-					+ "<br>"
-					+ "<br>1. Long press [On/Off] to power on "
-					+ "<br>"
-					+ "<br>2. Long press [Yes/Start] to configure the infusion pump";
-		}	
-		Display.setText(displayContent);
+			displayContent = "<html>" 
+					+ " <br>PumpId: " + pumpID
+					+ " <br>BatteryPercent: " + batteryPercent
+					+ " <br>"
+					+ " <br>Volume(ml): " + volume
+					+ " <br>Duration(mins): " + duration
+					+ " <br>Rate(ml/mins): " + calculateRate()
+					+ " <br>"
+					+ " <br>Status: " + status
+					+ "</html>";
+		}
+		displayLabel.setText(displayContent);
+	}
+	
+	private String calculateRate() {
+		return String.format("%.2f", (double)volume/duration);
 	}
 	
 	/**
 	 * Increase the value of rate, calculate the duration
 	 */
 	private void executeUp() {
-		if(status == Status.SettingStart) {
-			status = Status.Setting;
-			curRate = rate;
-		}
-		if(isPowerOn && status == Status.Setting) {
-			if(rate < RATE_MAX) {
-				rate += VALUE_STEP;
-				duration = (int) TOTAL_VOLUME/rate;
+		if(status == Status.SetVolume) {
+			if(volume < VOLUME_MAX) {
+				volume += VOLUME_STEP;				
 			}else {
-				rate = RATE_MAX; 
-				duration = (int) TOTAL_VOLUME/rate;
+				volume = VOLUME_MAX; 
 			}
-			System.out.println("Increase rate to: " + rate);
-		}	
+			System.out.println("Increase volume to: " + volume);
+		}else if(status == Status.SetDuration) {
+			if(duration < DURATION_MAX) {
+				duration += DURATION_STEP;
+			}else {
+				duration = DURATION_MAX; 
+			}			
+			System.out.println("Increase duration to: " + duration);
+		}
 		displayInfo();
 	}
 	
@@ -242,19 +243,20 @@ public class InfusionPump extends JFrame{
 	 * Decrease the value of rate, calculate the duration
 	 */
 	private void executeDown() {
-		if(status == Status.SettingStart) {
-			status = Status.Setting;
-			curRate = rate;
-		}
-		if(isPowerOn && status == Status.Setting) {
-			if(rate > 1) {
-				rate -= VALUE_STEP;
-				duration = (int) TOTAL_VOLUME/rate;
+		if(status == Status.SetVolume) {
+			if(volume > VOLUME_MIN) {
+				volume -= VOLUME_STEP;				
 			}else {
-				rate = 1;
-				duration = (int) TOTAL_VOLUME/rate;
+				volume = VOLUME_MIN; 
 			}
-			System.out.println("Decrease rate to: " + rate);
+			System.out.println("Decrease volume to: " + volume);
+		}else if(status == Status.SetDuration) {
+			if(duration > DURATION_MIN) {
+				duration -= DURATION_STEP;
+			}else {
+				duration = DURATION_MIN; 
+			}
+			System.out.println("Decrease duration to: " + duration);
 		}
 		displayInfo();
 	}
@@ -262,79 +264,77 @@ public class InfusionPump extends JFrame{
 	/**
 	 * Start infusion	
 	 */
-	private void executeYesStart() {	
-		if(isPowerOn) {
-			if(status == Status.Initial) {
-				System.out.println("Please configure the infusion pump first ");
-			}else if(status == Status.Paused  || status == Status.SettingCancelled || status == Status.Setting) {
+	private void executeYesStart() {
+		switch(status) {
+			case Initial:
+			case Infusing:
+			case SettingsCancelled:
+				status = Status.SetVolume;
+				break;
+			case SetVolume:
+				status = Status.SetDuration;
+				break;
+			case SetDuration:
+				status = Status.SettingsConfirmed;
+				oldVolume = volume;
+				oldDuration = duration;
+				break;
+			case SettingsConfirmed:
+				status = Status.QStartInfusion;
+				break;
+			case QStartInfusion:
 				status = Status.Infusing;
-				System.out.println("**** Start infusion ****");
-			}
-			displayInfo();
-		}		
-	}
-	
-	/**
-	 * Start configuration
-	 */
-	public void executeSetting() {
-		if(isPowerOn && status != Status.SettingStart) {
-				status = Status.SettingStart;
-				System.out.println("**** Start configuration ****");
-			}
-		displayInfo();
-	}
+				break;
+			case Paused:
+				status = Status.Infusing;
+				break;
+			default:
+				break;
+		}
+		displayInfo();	
+	}	
 
 	/**
 	 * Cancel settings or pause infusion
 	 */
 	private void executeNoStop() {
-		if(isPowerOn) {
-			if(status == Status.Infusing) {
+		switch (status){
+			case SetVolume:
+			case SetDuration:
+				status = Status.SettingsCancelled;
+				volume = oldVolume;
+				duration = oldDuration;
+				System.out.println("**** Cancel settings ****");
+				break;
+			case Paused:
+			case SettingsCancelled:
+				initializeValue();
+				System.out.println("**** Status: paused/settingsCancelled -> Initial ****");
+				break;
+			default:
 				status = Status.Paused;
-				System.out.println("**** Status: infusting -> paused ****");
-			}else if(status == Status.Setting || status == Status.SettingStart) {
-				setRate(curRate);
-				setDuration(curRate);
-				status = Status.SettingCancelled;
-				System.out.println("**** Cancel configuration ****");
-			}
-			displayInfo();
+				System.out.println("**** Status: infusing -> paused ****");
+				break;
 		}
+		displayInfo();
 	}
 	
 	/**
 	 * Power on or power off
 	 */
 	private void executeOnOff() {
-		if (isPowerOn == false) {
-			isPowerOn = true;
-			System.out.println("**** Power on ****");
+		if (status == Status.Off) {
+			status = Status.Initial;
+			initializeValue();
+			System.out.println("**** Powered on ****");
 		}else {
-			isPowerOn = false;
+			status = Status.Off;
+			upBtn.setEnabled(false);
+			downBtn.setEnabled(false);
+			noStopBtn.setEnabled(false);
 			System.out.println("**** Powered off ****");
 		}
 		displayInfo();
 	}
 	
-	public void setRate(int rate) {
-		this.rate = rate;
-	}
-
-	public int getRate() {
-		return rate;
-	}
-	
-	public int getDuration() {
-		return duration;
-	}
-	
-	public void setDuration(int rate) {
-		if(rate != 0) {
-			this.duration = (int)TOTAL_VOLUME/rate;
-		}else {
-			duration = 0;
-		}
-
-	}
 }
