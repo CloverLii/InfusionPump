@@ -20,21 +20,20 @@ public class InfusionPump extends JFrame{
 	private JButton noStopBtn;
 	private JButton onOffBtn;
 	private JLabel displayLabel;
-	private JLabel hintLabel;
 			
-	private final int VOLUME_MAX = 800; //ml
-	private final int VOLUME_MIN = 100;
-	private final int DURATION_MAX = 80; //mins
+	private final int VOLUME_MAX = 800; //maximum of volume, ml
+	private final int VOLUME_MIN = 100; 
+	private final int DURATION_MAX = 80; //maximum of duration, mins
 	private final int DURATION_MIN = 10;
-	private final int VOLUME_STEP = 100;
-	private final int DURATION_STEP = 10;
+	private final int VOLUME_STEP = 100; //increment or decrement when change volume
+	private final int DURATION_STEP = 10; //increment or decrement when change duration
 	
-	private int pumpID;
-	private int batteryPercent = 0;
-	private int volume = 0; //ml
-	private int duration = 0;	//mins
-	private int oldVolume = 0;
-	private int oldDuration = 0;
+	private int pumpID; //default value is 1
+	private int batteryPercent = 0; // value is 100 when power on
+	private int volume = 0; 
+	private int duration = 0;	
+	private int oldVolume = 0; //used when cancel settings
+	private int oldDuration = 0; //used when cancel settings
 	private String displayContent = " ";
 	
 	private final String hintStr = "<html>"
@@ -48,20 +47,19 @@ public class InfusionPump extends JFrame{
 			+ "<br> -> Start Infusion...";
 	
 	enum Status{
-		Off,
-		Initial,	// initial status after powered on
+		Off, // power off
+		Initial, // initial status after powered on or stop infusion
 		SetVolume,
 		SetDuration,
 		SettingsConfirmed,
-		QStartInfusion,
-		Infusing,	// infusion is ongoing
-		Paused,		// infusion is paused
-		SettingsCancelled,	// configuration is cancelled
-		Stopped
+		QStartInfusion, //double check before start infusion
+		Infusing, // infusion is ongoing
+		Paused,	 // infusion is paused
+		SettingsCancelled // configuration is cancelled
 	}
 	private Status status = Status.Off;
 	
-	/**
+	/*
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
@@ -84,8 +82,8 @@ public class InfusionPump extends JFrame{
 		displayInfo();
 	}
 	
-/**
- * Create main view of the infusion pump	
+/*
+ * Create all elements of the infusion pump	
  */
 	public void initialize () {
 		
@@ -94,7 +92,7 @@ public class InfusionPump extends JFrame{
 		
 		Container container = jf.getContentPane();	
 		
-		hintLabel  = new JLabel();
+		JLabel hintLabel  = new JLabel();
 		hintLabel.setBounds(30, 20, 180, 180);
 		Border border = BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1);
 		hintLabel.setBorder(border);
@@ -140,7 +138,6 @@ public class InfusionPump extends JFrame{
 		container.add(yesStartBtn);
 			
 		noStopBtn = new JButton("No/Stop");
-		//NoStop.setName("NoStop");
 		noStopBtn.setBounds(125, 320, 170, 80);
 		noStopBtn.addActionListener(new ActionListener(){
 			@Override
@@ -166,8 +163,8 @@ public class InfusionPump extends JFrame{
 		jf.setDefaultCloseOperation(EXIT_ON_CLOSE);
 	}
 	
-/**
- * Initialize the values when turns on	
+/*
+ * Initialize values	
  */
 	private void initializeValue() {
 		
@@ -185,6 +182,9 @@ public class InfusionPump extends JFrame{
 		displayInfo();
 	}
 	
+	/*
+	 * Display the settings and status
+	 */
 	private void displayInfo() {
 		if(status == Status.Off) {
 			displayContent = "<html>" 
@@ -207,12 +207,15 @@ public class InfusionPump extends JFrame{
 		displayLabel.setText(displayContent);
 	}
 	
+	/*
+	 * Calculate infusion rate
+	 */
 	private String calculateRate() {
 		return String.format("%.2f", (double)volume/duration);
 	}
 	
-	/**
-	 * Increase the value of rate, calculate the duration
+	/*
+	 * Increase the value of volume of duration
 	 */
 	private void executeUp() {
 		if(status == Status.SetVolume) {
@@ -233,8 +236,8 @@ public class InfusionPump extends JFrame{
 		displayInfo();
 	}
 	
-	/**
-	 * Decrease the value of rate, calculate the duration
+	/*
+	 * Decrease the value of volume or duration
 	 */
 	private void executeDown() {
 		if(status == Status.SetVolume) {
@@ -255,8 +258,8 @@ public class InfusionPump extends JFrame{
 		displayInfo();
 	}
 	
-	/**
-	 * Start infusion	
+	/*
+	 * Switch modes: SetVolume, SetDuration, ConfirmSettings, QInfusionStart, StartInfusion	
 	 */
 	private void executeYesStart() {
 		switch(status) {
@@ -291,8 +294,8 @@ public class InfusionPump extends JFrame{
 		displayInfo();	
 	}	
 
-	/**
-	 * Cancel settings or pause infusion
+	/*
+	 * Cancel settings, pause infusion or stop infusion
 	 */
 	private void executeNoStop() {
 		switch (status){
@@ -316,7 +319,7 @@ public class InfusionPump extends JFrame{
 		displayInfo();
 	}
 	
-	/**
+	/*
 	 * Power on or power off
 	 */
 	private void executeOnOff() {
